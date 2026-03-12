@@ -48,8 +48,7 @@ const PRELOADED_CSV = `Frage,OptionA,OptionB,OptionC,OptionD,Korrekt
 "Für welche Bereiche der Löschwasserversorgung ist die Gemeinde zuständig?","Löschwasserversorgung über die Sammelwasserversorgung (Hydranten)","Den Grundschutz in der Löschwasserversorgung","Den Objektschutz für Betriebe, wenn dieses die Baugenehmigung erfordert","Löschwasserversorgung über Bohrbrunnen, Löschwasserzisternen oder offene Wasserentnahmestellen","A;B;D"
 "Der Objektschutz beinhaltet das Vorhalten von Brandschutzeinrichtungen, die den Grundschutz der Kommune übersteigen. Dazu zählen das Vorhalten von Steigleitungen, ortsfeste Löschanlagen oder Löschwasserbevorratung oder – vorhaltung auf dem Grundstück.","Wahr","Falsch","","","A"
 "Wer stellt in der Regel die Brandsicherheitswache?","Der Veranstalter stellt die Brandsicherheitswache.","Die genehmigende Behörde (Ordnungsbehörde) stellt die Brandsicherheitswache.","Sie wird von der öffentlich zuständigen Feuerwehr gestellt.","","C"
-"Welche Mindestqualifikation (abgeschlossene Ausbildung) ist für die Teilnehmer der Brandsicherheitswache gefordert?","Truppmannausbildung","Gruppenführerausbildung","Truppführerausbildung","","C"
-`;
+"Welche Mindestqualifikation (abgeschlossene Ausbildung) ist für die Teilnehmer der Brandsicherheitswache gefordert?","Truppmannausbildung","Gruppenführerausbildung","Truppführerausbildung","","C"`;
 
 function parseCsvLine(line: string): string[] {
   const result: string[] = [];
@@ -90,15 +89,7 @@ function parseQuestionsFromCsv(csv: string): Question[] {
   }
 
   const headers = parseCsvLine(lines[0]).map((h) => h.toLowerCase());
-
-  const qIndex = headers.indexOf("frage");
-  const a = headers.indexOf("optiona");
-  const b = headers.indexOf("optionb");
-  const c = headers.indexOf("optionc");
-  const d = headers.indexOf("optiond");
-  const correctCol = headers.indexOf("korrekt");
-
-  if (qIndex === -1 || a === -1 || b === -1 || correctCol === -1) {
+  if (headers[0] !== "frage" || headers[headers.length - 1] !== "korrekt") {
     return [];
   }
 
@@ -107,24 +98,24 @@ function parseQuestionsFromCsv(csv: string): Question[] {
     B: 1,
     C: 2,
     D: 3,
+    E: 4,
+    F: 5,
   };
 
   return lines.slice(1).map((line, idx) => {
     const cols = parseCsvLine(line);
 
-    const question = cols[qIndex];
-    const options = [cols[a], cols[b], cols[c], cols[d]].filter(
-      (o) => o && o.length > 0
-    );
+    const question = cols[0];
+    const options = cols.slice(1, -1).filter((o) => o && o.length > 0);
 
-    const correctRaw = (cols[correctCol] || "")
+    const correctRaw = (cols[cols.length - 1] || "")
       .split(";")
       .map((x) => x.trim().toUpperCase())
       .filter(Boolean);
 
     const correct = correctRaw
       .map((letter) => letterMap[letter])
-      .filter((value) => value !== undefined);
+      .filter((value) => value !== undefined && value < options.length);
 
     return {
       id: idx + 1,
@@ -135,18 +126,49 @@ function parseQuestionsFromCsv(csv: string): Question[] {
   });
 }
 
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
 export default function SimpleMcqTestTool() {
-  const [questions] = useState<Question[]>(() => parseQuestionsFromCsv(PRELOADED_CSV));
+  const allQuestions = useMemo(() => parseQuestionsFromCsv(PRELOADED_CSV), []);
+  const totalDatabankCount = allQuestions.length;
+
+  const [quizSizeInput, setQuizSizeInput] = useState("10");
+  const [quizQuestions, setQuizQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [selected, setSelected] = useState<number[]>([]);
   const [result, setResult] = useState<"correct" | "wrong" | null>(null);
   const [score, setScore] = useState({ correct: 0, wrong: 0, answered: 0 });
 
-  const currentQuestion = questions[currentIndex];
-  const questionCount = useMemo(() => questions.length, [questions]);
+  const currentQuestion = quizQuestions[currentIndex];
+  const quizCount = quizQuestions.length;
+  const quizFinished = quizCount > 0 && currentIndex >= quizCount;
+
+  function startQuiz() {
+    if (allQuestions.length === 0) return;
+
+    const requested = Number.parseInt(quizSizeInput, 10);
+    const safeRequested = Number.isNaN(requested) ? 10 : requested;
+    const clampedCount = Math.max(1, Math.min(safeRequested, allQuestions.length));
+
+    const randomSet = shuffleArray(allQuestions).slice(0, clampedCount);
+
+    setQuizQuestions(randomSet);
+    setCurrentIndex(0);
+    setSelected([]);
+    setResult(null);
+    setScore({ correct: 0, wrong: 0, answered: 0 });
+    setQuizSizeInput(String(clampedCount));
+  }
 
   function toggleAnswer(index: number) {
-    if (result) return;
+    if (result || quizFinished) return;
 
     if (selected.includes(index)) {
       setSelected(selected.filter((i) => i !== index));
@@ -171,15 +193,17 @@ export default function SimpleMcqTestTool() {
   }
 
   function nextQuestion() {
-    if (questions.length === 0) return;
+    if (quizCount === 0) return;
 
-    const next = currentIndex + 1 >= questions.length ? 0 : currentIndex + 1;
+    const next = currentIndex + 1;
     setCurrentIndex(next);
     setSelected([]);
     setResult(null);
   }
 
-  function resetSession() {
+  function resetCurrentQuiz() {
+    if (quizCount === 0) return;
+
     setCurrentIndex(0);
     setSelected([]);
     setResult(null);
@@ -193,80 +217,138 @@ export default function SimpleMcqTestTool() {
   }
 
   return (
-    <div style={{ padding: 24, fontFamily: "Arial, sans-serif", maxWidth: 1100, margin: "0 auto" }}>
+    <div
+      style={{
+        padding: 24,
+        fontFamily: "Arial, sans-serif",
+        maxWidth: 1100,
+        margin: "0 auto",
+      }}
+    >
       <h1>Prüfungsvorbereitung Gruppenführer</h1>
       <h2>Kurs 0801 und 0802</h2>
 
       <div style={{ marginBottom: 20 }}>
-        <div>Geladene Fragen: {questionCount}</div>
+        <div>Fragen in der Datenbank: {totalDatabankCount}</div>
         <div>Beantwortet: {score.answered}</div>
         <div>Richtig: {score.correct}</div>
         <div>Falsch: {score.wrong}</div>
-        {questionCount > 0 && <div>Aktuelle Frage: {currentIndex + 1} / {questionCount}</div>}
+        {quizCount > 0 && !quizFinished && (
+          <div>
+            Aktuelle Frage: {currentIndex + 1} / {quizCount}
+          </div>
+        )}
+        {quizFinished && <div>Quiz abgeschlossen: {quizCount} / {quizCount}</div>}
       </div>
 
-      <div>
-        <button onClick={nextQuestion}>Nächste Frage</button>
-        <button onClick={resetSession} style={{ marginLeft: 10 }}>
-          Zurücksetzen
+      <div
+        style={{
+          display: "flex",
+          gap: 12,
+          alignItems: "end",
+          flexWrap: "wrap",
+          marginBottom: 20,
+          padding: 16,
+          border: "1px solid #ddd",
+          borderRadius: 8,
+        }}
+      >
+        <div>
+          <label htmlFor="quiz-size" style={{ display: "block", marginBottom: 6 }}>
+            Anzahl der Fragen
+          </label>
+          <input
+            id="quiz-size"
+            type="number"
+            min={1}
+            max={totalDatabankCount || 1}
+            value={quizSizeInput}
+            onChange={(e) => setQuizSizeInput(e.target.value)}
+            style={{ padding: 8, width: 140 }}
+          />
+        </div>
+
+        <button onClick={startQuiz}>Quiz starten</button>
+
+        <button onClick={resetCurrentQuiz} disabled={quizCount === 0}>
+          Quiz zurücksetzen
         </button>
+      </div>
 
-        <div style={{ marginTop: 20, border: "1px solid #ddd", padding: 16, borderRadius: 8 }}>
-          {!currentQuestion ? (
-            <p>Es sind keine Fragen geladen.</p>
-          ) : (
-            <div>
-              <h3>{currentQuestion.question}</h3>
+      <div style={{ marginTop: 20, border: "1px solid #ddd", padding: 16, borderRadius: 8 }}>
+        {quizCount === 0 ? (
+          <p>Bitte zuerst die gewünschte Anzahl an Fragen eingeben und „Quiz starten“ klicken.</p>
+        ) : quizFinished ? (
+          <div>
+            <h3>Quiz abgeschlossen</h3>
+            <p>
+              Ergebnis: {score.correct} richtig, {score.wrong} falsch
+            </p>
+            <p>Für ein neues zufälliges Set einfach oben erneut auf „Quiz starten“ klicken.</p>
+          </div>
+        ) : !currentQuestion ? (
+          <p>Es sind keine Fragen geladen.</p>
+        ) : (
+          <div>
+            <h3>{currentQuestion.question}</h3>
 
-              <div style={{ marginTop: 10 }}>
-                {currentQuestion.options.map((option, i) => (
-                  <div key={i} style={{ marginBottom: 8 }}>
-                    <label style={{ cursor: result ? "default" : "pointer" }}>
-                      <input
-                        type="checkbox"
-                        checked={selected.includes(i)}
-                        onChange={() => toggleAnswer(i)}
-                        disabled={!!result}
-                      />{" "}
-                      <strong>{String.fromCharCode(65 + i)}.</strong> {option}
-                    </label>
-                  </div>
-                ))}
-              </div>
+            <div style={{ marginTop: 10 }}>
+              {currentQuestion.options.map((option, i) => (
+                <div key={i} style={{ marginBottom: 8 }}>
+                  <label style={{ cursor: result ? "default" : "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(i)}
+                      onChange={() => toggleAnswer(i)}
+                      disabled={!!result}
+                    />{" "}
+                    <strong>{String.fromCharCode(65 + i)}.</strong> {option}
+                  </label>
+                </div>
+              ))}
+            </div>
 
+            <div style={{ marginTop: 12 }}>
               <button
-                style={{ marginTop: 12 }}
                 onClick={checkAnswer}
                 disabled={selected.length === 0 || !!result}
               >
                 Antwort prüfen
               </button>
 
-              {result && (
-                <div
-                  style={{
-                    marginTop: 12,
-                    padding: 12,
-                    borderRadius: 6,
-                    background: result === "correct" ? "#ecfdf5" : "#fef2f2",
-                    border: "1px solid #ddd",
-                  }}
-                >
-                  {result === "correct" ? (
-                    <strong>Richtig.</strong>
-                  ) : (
-                    <>
-                      <strong>Falsch.</strong>
-                      <div style={{ marginTop: 8 }}>
-                        Richtige Antwort(en): {formatCorrectAnswers(currentQuestion)}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
+              <button
+                onClick={nextQuestion}
+                disabled={!result}
+                style={{ marginLeft: 10 }}
+              >
+                Nächste Frage
+              </button>
             </div>
-          )}
-        </div>
+
+            {result && (
+              <div
+                style={{
+                  marginTop: 12,
+                  padding: 12,
+                  borderRadius: 6,
+                  background: result === "correct" ? "#ecfdf5" : "#fef2f2",
+                  border: "1px solid #ddd",
+                }}
+              >
+                {result === "correct" ? (
+                  <strong>Richtig.</strong>
+                ) : (
+                  <>
+                    <strong>Falsch.</strong>
+                    <div style={{ marginTop: 8 }}>
+                      Richtige Antwort(en): {formatCorrectAnswers(currentQuestion)}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
