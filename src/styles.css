@@ -1,4 +1,272 @@
-.App {
-  font-family: sans-serif;
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: linear-gradient(180deg, #f3f5f7 0%, #eef2f5 100%);
+  color: #1f2937;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: 32px 20px 48px;
+}
+
+.app-container {
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.hero-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  padding: 28px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+  margin-bottom: 20px;
+}
+
+.hero-title {
+  margin: 0;
+  font-size: 2.2rem;
+  line-height: 1.1;
+  color: #111827;
+}
+
+.hero-subtitle {
+  margin: 10px 0 0;
+  font-size: 1.1rem;
+  color: #991b1b;
+  font-weight: 700;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.stat-card {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.panel-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+  margin-bottom: 20px;
+}
+
+.controls-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 170px;
+}
+
+.input-label {
+  font-size: 0.95rem;
+  color: #374151;
+  font-weight: 600;
+}
+
+.number-input {
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  color: #111827;
+}
+
+.btn {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: transform 0.05s ease, opacity 0.2s ease, background 0.2s ease;
+}
+
+.btn:hover {
+  opacity: 0.95;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.btn-primary {
+  background: #b91c1c;
+  color: white;
+}
+
+.btn-secondary {
+  background: #374151;
+  color: white;
+}
+
+.btn-neutral {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.progress-wrap {
+  margin-bottom: 18px;
+}
+
+.progress-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+  color: #4b5563;
+  font-weight: 600;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 10px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #b91c1c 0%, #dc2626 100%);
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+
+.question-title {
+  margin: 0 0 18px;
+  font-size: 1.55rem;
+  line-height: 1.35;
+  color: #111827;
+}
+
+.answers-list {
+  display: grid;
+  gap: 10px;
+}
+
+.answer-option {
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #ffffff;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.answer-option:hover {
+  border-color: #9ca3af;
+  background: #fafafa;
+}
+
+.answer-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  line-height: 1.45;
+}
+
+.answer-letter {
+  font-weight: 700;
+  color: #991b1b;
+}
+
+.actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.feedback-box {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  line-height: 1.5;
+}
+
+.feedback-correct {
+  background: #ecfdf5;
+  color: #166534;
+}
+
+.feedback-wrong {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.empty-state {
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.footer-note {
   text-align: center;
+  color: #6b7280;
+  font-size: 0.92rem;
+  margin-top: 26px;
+}
+
+.footer-note strong {
+  color: #374151;
+}
+
+@media (max-width: 640px) {
+  .hero-title {
+    font-size: 1.8rem;
+  }
+
+  .question-title {
+    font-size: 1.3rem;
+  }
+
+  .hero-card,
+  .panel-card {
+    padding: 16px;
+    border-radius: 14px;
+  }
 }
