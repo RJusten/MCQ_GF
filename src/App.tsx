@@ -10,6 +10,13 @@ type Question = {
 
 const PRELOADED_CSV = `Frage,OptionA,OptionB,OptionC,OptionD,Korrekt
 "Ein Täuschungsalarm ist ein ordnungsgemäßes Auslösen der Brandmeldeanlage ohne reales Feuer und damit einem notwendigen Eingreifen der Feuerwehr in Form von Lösch- oder Rettungsmaßnahmen.","Wahr","Falsch","","","A"
+"Wie lautet das Hebelgesetz, wenn der Hebel im Gleichgewicht ist?","Last * Kraftarm = Kraft * Lastarm","Kraft = Last * Lastarm / Kraftarm","Kraft * Kraftarm = Last * Lastarm","Kraft * Kraftarm = 0","C"
+"Ab wann kann ein Gegenstand kippen, wenn eine Kraft auf ihn wirkt ?","Wenn die Kraft unterhalb des Schwerpunktes wirkt.","Wenn die Kraft oberhalb des Schwerpunktes wirkt.","","","B"
+"Wie wird eine feste Rolle auch genannt?","Klapprolle","Kraftrolle","Zugrolle","Umlenkrolle","D"
+"Wie verhält sich die feste Rolle in Bezug auf die Kraft (Kraftaufwand)?","Der Kraftaufwand verändert sich nicht, da die Kraft nur umgelenkt wird.","Der Kraftaufwand halbiert sich ungefähr. Dafür muss aber mit dem Zugseil ein höherer Weg zurückgelegt werden.","Rollen verändern den Kraftaufwand nicht.","","","A"
+"Wie verhält sich die lose Rolle in Bezug auf die Kraft (Kraftaufwand)?","Der Seilweg verlängert sich zwar, jedoch ändert sich der Kraftaufwand nicht.","Die lose Rolle lenkt die Kraft nur um. Auf den Kraftaufwand hat sie keinen Einfluss.","Der Kraftaufwand halbiert sich ungefähr. Jedoch muss ca. der doppelte Seilweg aufgewendet werden.","","","C"
+"Die goldene Regel der Mechanik lautet: 'Was an Kraft gespart wird, muss an Weg zugelegt werden.'","Wahr","Falsch","","","A"
+"Wenn ein einseitiger Hebel eingesetzt wird kann im Gegensatz zum zweiseitigen Hebel eine höhere Last angehoben werden. Vorausgesetzt bei beiden Hebelvarianten wird die gleich Kraft eingesetzt.","Wahr","Falsch","","","A"
 "Sie setzen im Hilfeleistungseinsatz hydraulisches Rettungsgerät ein. Welche Grundsätze sind zu beachten?","Es muss mindestens ein 2-facher Brandschutz vorhanden sein.","Es muss mindestens eine Führungskraft mit der Qualifikation Zugführer vor Ort sein.","Sie müssen mindestens eine Löschgruppe vor Ort haben.","Es muss ein 2. hydraulischer Rettungssatz an der Einsatzstelle sein.","A;D"
 "In welcher Reihenfolge stehen die Bestandteile des Führungsvorganges?","Lagefeststellung, Planung, Befehlsgebung","Erkundung/Kontrolle, Entschluss/Beurteilung, Befehl/Lagemeldung","Lagefeststellung, Befehlsgebung, Planung","Planung, Lagefeststellung, Befehlsgebung","A;B"
 "In welche Teilbereiche gliedert sich das Führungssystem nach der FwDV 100?","Führungsorganisation, Führungsvorgang, Führungsmittel","Erkundung, Beurteilung, Befehlsgebung","Führungsstil, Fachwissen, Führungsmittel","Führungsgehilfe, Leitstelle, Führungsmittel","A"
