@@ -1,8 +1,24 @@
 body {
   margin: 0;
   font-family: Arial, Helvetica, sans-serif;
-  background: linear-gradient(180deg, #f3f5f7 0%, #eef2f5 100%);
   color: #1f2937;
+
+  background-image: url("/firefighter-in-action-stockcake.webp");
+  background-size: cover;
+  background-position: center top;
+  background-attachment: fixed;
+}
+
+/* soft overlay so the background image stays subtle */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(3px);
+
+  z-index: -1;
 }
 
 * {
