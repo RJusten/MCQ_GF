@@ -192,12 +192,12 @@ export default function SimpleMcqTestTool() {
   }, []);
 
   const topics = useMemo(() => {
-  const uniqueTopics = Array.from(new Set(allQuestions.map((q) => q.topic)));
-  return uniqueTopics
-    .filter((topic): topic is string => Boolean(topic))
-    .sort((a, b) => a.localeCompare(b, "de"));
-}, [allQuestions]);
-  
+    const uniqueTopics = Array.from(new Set(allQuestions.map((q) => q.topic)));
+    return uniqueTopics
+      .filter((topic): topic is string => Boolean(topic))
+      .sort((a, b) => a.localeCompare(b, "de"));
+  }, [allQuestions]);
+
   const filteredQuestions = useMemo(() => {
     if (selectedTopic === ALL_TOPICS) {
       return allQuestions;
@@ -206,6 +206,17 @@ export default function SimpleMcqTestTool() {
   }, [allQuestions, selectedTopic]);
 
   const totalDatabankCount = filteredQuestions.length;
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    if (totalDatabankCount > 0) {
+      setQuizSizeInput(String(totalDatabankCount));
+    } else {
+      setQuizSizeInput("0");
+    }
+  }, [selectedTopic, totalDatabankCount, isLoading]);
+
   const currentQuestion = quizQuestions[currentIndex];
   const quizCount = quizQuestions.length;
   const quizFinished = quizCount > 0 && currentIndex >= quizCount;
