@@ -206,6 +206,8 @@ export default function SimpleMcqTestTool() {
   const [selected, setSelected] = useState<number[]>([]);
   const [result, setResult] = useState<"correct" | "wrong" | null>(null);
   const [score, setScore] = useState({ correct: 0, wrong: 0, answered: 0 });
+  const [wrongQuestions, setWrongQuestions] = useState<Question[]>([]);
+  const [isRetryMode, setIsRetryMode] = useState(false);
 
   const currentQuestion = quizQuestions[currentIndex];
   const quizCount = quizQuestions.length;
@@ -228,7 +230,22 @@ export default function SimpleMcqTestTool() {
     setSelected([]);
     setResult(null);
     setScore({ correct: 0, wrong: 0, answered: 0 });
+    setWrongQuestions([]);
+    setIsRetryMode(false);
     setQuizSizeInput(String(clampedCount));
+  }
+
+  function retryWrongQuestions() {
+    if (wrongQuestions.length === 0) return;
+
+    setQuizQuestions(wrongQuestions);
+    setCurrentIndex(0);
+    setSelected([]);
+    setResult(null);
+    setScore({ correct: 0, wrong: 0, answered: 0 });
+    setWrongQuestions([]);
+    setIsRetryMode(true);
+    setQuizSizeInput(String(wrongQuestions.length));
   }
 
   function toggleAnswer(index: number) {
@@ -254,6 +271,13 @@ export default function SimpleMcqTestTool() {
       wrong: prev.wrong + (isCorrect ? 0 : 1),
       answered: prev.answered + 1,
     }));
+
+    if (!isCorrect) {
+      setWrongQuestions((prev) => {
+        const alreadyIncluded = prev.some((q) => q.id === currentQuestion.id);
+        return alreadyIncluded ? prev : [...prev, currentQuestion];
+      });
+    }
   }
 
   function nextQuestion() {
@@ -272,11 +296,16 @@ export default function SimpleMcqTestTool() {
     setSelected([]);
     setResult(null);
     setScore({ correct: 0, wrong: 0, answered: 0 });
+    setWrongQuestions([]);
+    setIsRetryMode(false);
   }
 
   function formatCorrectAnswers(question: Question) {
     return question.correct
-      .map((index) => `${String.fromCharCode(65 + index)}. ${question.options[index]}`)
+      .map(
+        (index) =>
+          `${String.fromCharCode(65 + index)}. ${question.options[index]}`
+      )
       .join(" | ");
   }
 
@@ -341,27 +370,52 @@ export default function SimpleMcqTestTool() {
         <section className="panel-card">
           {quizCount === 0 ? (
             <p className="empty-state">
-              Bitte zuerst die gewünschte Anzahl an Fragen eingeben und „Quiz starten“ klicken.
+              Bitte zuerst die gewünschte Anzahl an Fragen eingeben und „Quiz
+              starten“ klicken.
             </p>
           ) : quizFinished ? (
             <div>
               <div className="progress-wrap">
                 <div className="progress-top">
-                  <span>Quiz abgeschlossen</span>
-                  <span>{quizCount} / {quizCount}</span>
+                  <span>
+                    {isRetryMode ? "Wiederholung abgeschlossen" : "Quiz abgeschlossen"}
+                  </span>
+                  <span>
+                    {quizCount} / {quizCount}
+                  </span>
                 </div>
                 <div className="progress-bar">
                   <div className="progress-bar-fill" style={{ width: "100%" }} />
                 </div>
               </div>
 
-              <h3 className="question-title">Stark gemacht.</h3>
+              <h3 className="question-title">
+                {isRetryMode ? "Wiederholung beendet." : "Stark gemacht."}
+              </h3>
+
               <p className="empty-state">
                 Ergebnis: {score.correct} richtig, {score.wrong} falsch
               </p>
-              <p className="empty-state">
-                Für ein neues zufälliges Set einfach oben erneut auf „Quiz starten“ klicken.
-              </p>
+
+              {wrongQuestions.length > 0 ? (
+                <>
+                  <p className="empty-state">
+                    Du kannst jetzt nur die falsch beantworteten Fragen erneut
+                    üben.
+                  </p>
+
+                  <div className="actions-row">
+                    <button className="btn btn-primary" onClick={retryWrongQuestions}>
+                      Nur falsche Fragen wiederholen
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <p className="empty-state">
+                  Für ein neues zufälliges Set einfach oben erneut auf „Quiz
+                  starten“ klicken.
+                </p>
+              )}
             </div>
           ) : !currentQuestion ? (
             <p className="empty-state">Es sind keine Fragen geladen.</p>
@@ -369,7 +423,11 @@ export default function SimpleMcqTestTool() {
             <div>
               <div className="progress-wrap">
                 <div className="progress-top">
-                  <span>Frage {currentIndex + 1} von {quizCount}</span>
+                  <span>
+                    {isRetryMode
+                      ? `Wiederholung: Frage ${currentIndex + 1} von ${quizCount}`
+                      : `Frage ${currentIndex + 1} von ${quizCount}`}
+                  </span>
                   <span>{Math.round(progressPercent)}%</span>
                 </div>
                 <div className="progress-bar">
@@ -444,7 +502,8 @@ export default function SimpleMcqTestTool() {
         </section>
 
         <div className="footer-note">
-          Ausschließlich entwickelt für die Prüfungsvorbereitung Gruppenführer E-Learning März 2026 · <strong>Powered by Richie</strong>
+          Ausschließlich entwickelt für die Prüfungsvorbereitung Gruppenführer
+          E-Learning März 2026 · <strong>Powered by Richie</strong>
         </div>
       </div>
     </div>
