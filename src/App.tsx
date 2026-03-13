@@ -208,10 +208,15 @@ export default function SimpleMcqTestTool() {
   const [score, setScore] = useState({ correct: 0, wrong: 0, answered: 0 });
   const [wrongQuestions, setWrongQuestions] = useState<Question[]>([]);
   const [isRetryMode, setIsRetryMode] = useState(false);
+  const [excludedQuestionIds, setExcludedQuestionIds] = useState<number[]>([]);
 
   const currentQuestion = quizQuestions[currentIndex];
   const quizCount = quizQuestions.length;
   const quizFinished = quizCount > 0 && currentIndex >= quizCount;
+
+  const remainingNewQuestionsCount = allQuestions.filter(
+    (question) => !excludedQuestionIds.includes(question.id)
+  ).length;
 
   const progressPercent =
     quizCount > 0 ? Math.min((score.answered / quizCount) * 100, 100) : 0;
@@ -232,6 +237,7 @@ export default function SimpleMcqTestTool() {
     setScore({ correct: 0, wrong: 0, answered: 0 });
     setWrongQuestions([]);
     setIsRetryMode(false);
+    setExcludedQuestionIds([]);
     setQuizSizeInput(String(clampedCount));
   }
 
@@ -246,6 +252,29 @@ export default function SimpleMcqTestTool() {
     setWrongQuestions([]);
     setIsRetryMode(true);
     setQuizSizeInput(String(wrongQuestions.length));
+  }
+
+  function startNewQuizWithoutCorrectAnswers() {
+    const remainingPool = allQuestions.filter(
+      (question) => !excludedQuestionIds.includes(question.id)
+    );
+
+    if (remainingPool.length === 0) return;
+
+    const requested = Number.parseInt(quizSizeInput, 10);
+    const safeRequested = Number.isNaN(requested) ? 10 : requested;
+    const clampedCount = Math.max(1, Math.min(safeRequested, remainingPool.length));
+
+    const randomSet = shuffleArray(remainingPool).slice(0, clampedCount);
+
+    setQuizQuestions(randomSet);
+    setCurrentIndex(0);
+    setSelected([]);
+    setResult(null);
+    setScore({ correct: 0, wrong: 0, answered: 0 });
+    setWrongQuestions([]);
+    setIsRetryMode(false);
+    setQuizSizeInput(String(clampedCount));
   }
 
   function toggleAnswer(index: number) {
@@ -272,7 +301,11 @@ export default function SimpleMcqTestTool() {
       answered: prev.answered + 1,
     }));
 
-    if (!isCorrect) {
+    if (isCorrect) {
+      setExcludedQuestionIds((prev) =>
+        prev.includes(currentQuestion.id) ? prev : [...prev, currentQuestion.id]
+      );
+    } else {
       setWrongQuestions((prev) => {
         const alreadyIncluded = prev.some((q) => q.id === currentQuestion.id);
         return alreadyIncluded ? prev : [...prev, currentQuestion];
@@ -298,6 +331,7 @@ export default function SimpleMcqTestTool() {
     setScore({ correct: 0, wrong: 0, answered: 0 });
     setWrongQuestions([]);
     setIsRetryMode(false);
+    setExcludedQuestionIds([]);
   }
 
   function formatCorrectAnswers(question: Question) {
@@ -370,8 +404,7 @@ export default function SimpleMcqTestTool() {
         <section className="panel-card">
           {quizCount === 0 ? (
             <p className="empty-state">
-              Bitte zuerst die gewünschte Anzahl an Fragen eingeben und „Quiz
-              starten“ klicken.
+              Bitte zuerst die gewünschte Anzahl an Fragen eingeben und „Quiz starten“ klicken.
             </p>
           ) : quizFinished ? (
             <div>
@@ -397,25 +430,40 @@ export default function SimpleMcqTestTool() {
                 Ergebnis: {score.correct} richtig, {score.wrong} falsch
               </p>
 
-              {wrongQuestions.length > 0 ? (
-                <>
-                  <p className="empty-state">
-                    Du kannst jetzt nur die falsch beantworteten Fragen erneut
-                    üben.
-                  </p>
-
-                  <div className="actions-row">
-                    <button className="btn btn-primary" onClick={retryWrongQuestions}>
-                      Nur falsche Fragen wiederholen
-                    </button>
-                  </div>
-                </>
-              ) : (
+              {wrongQuestions.length > 0 && (
                 <p className="empty-state">
-                  Für ein neues zufälliges Set einfach oben erneut auf „Quiz
-                  starten“ klicken.
+                  Du kannst jetzt nur die falsch beantworteten Fragen erneut üben.
                 </p>
               )}
+
+              {remainingNewQuestionsCount > 0 ? (
+                <p className="empty-state">
+                  Alternativ kannst du ein neues zufälliges Set starten, wobei bereits richtig
+                  beantwortete Fragen ausgeblendet werden.
+                </p>
+              ) : (
+                <p className="empty-state">
+                  Es sind keine weiteren neuen Fragen mehr übrig. Du hast alle bisher richtig
+                  beantwortet.
+                </p>
+              )}
+
+              <div className="actions-row">
+                {wrongQuestions.length > 0 && (
+                  <button className="btn btn-primary" onClick={retryWrongQuestions}>
+                    Nur falsche Fragen wiederholen
+                  </button>
+                )}
+
+                {remainingNewQuestionsCount > 0 && (
+                  <button
+                    className="btn btn-secondary"
+                    onClick={startNewQuizWithoutCorrectAnswers}
+                  >
+                    Neue Fragen ohne bereits richtige starten
+                  </button>
+                )}
+              </div>
             </div>
           ) : !currentQuestion ? (
             <p className="empty-state">Es sind keine Fragen geladen.</p>
