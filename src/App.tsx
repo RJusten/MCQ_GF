@@ -436,7 +436,7 @@ export default function SimpleMcqTestTool() {
               onClick={resetWholeSession}
               disabled={sessionScore.answered === 0 && quizCount === 0}
             >
-              Ganze Lernphase zurücksetzen
+              Alles zurücksetzen
             </button>
           </div>
         </section>
