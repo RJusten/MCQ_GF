@@ -192,11 +192,12 @@ export default function SimpleMcqTestTool() {
   }, []);
 
   const topics = useMemo(() => {
-    return [...new Set(allQuestions.map((q) => q.topic))]
-      .filter(Boolean)
-      .sort((a, b) => a.localeCompare(b, "de"));
-  }, [allQuestions]);
-
+  const uniqueTopics = Array.from(new Set(allQuestions.map((q) => q.topic)));
+  return uniqueTopics
+    .filter((topic): topic is string => Boolean(topic))
+    .sort((a, b) => a.localeCompare(b, "de"));
+}, [allQuestions]);
+  
   const filteredQuestions = useMemo(() => {
     if (selectedTopic === ALL_TOPICS) {
       return allQuestions;
