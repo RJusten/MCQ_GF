@@ -3,10 +3,19 @@ import "./styles.css";
 
 type Question = {
   id: number;
+  topic: string;
   question: string;
   options: string[];
   correct: number[];
 };
+
+type Score = {
+  correct: number;
+  wrong: number;
+  answered: number;
+};
+
+const ALL_TOPICS = "__ALLE_THEMEN__";
 
 function parseCsvLine(line: string): string[] {
   const result: string[] = [];
@@ -46,11 +55,18 @@ function parseQuestionsFromCsv(csv: string): Question[] {
     return [];
   }
 
-  const headers = parseCsvLine(lines[0]).map((h) => h.toLowerCase());
+  const headers = parseCsvLine(lines[0]).map((h) => h.trim().toLowerCase());
 
-  if (headers[0] !== "frage" || headers[headers.length - 1] !== "korrekt") {
+  const topicIndex = headers.indexOf("thema");
+  const questionIndex = headers.indexOf("frage");
+  const correctIndex = headers.lastIndexOf("korrekt");
+
+  if (questionIndex === -1 || correctIndex === -1) {
     return [];
   }
+
+  const optionStart = questionIndex + 1;
+  const optionEnd = correctIndex;
 
   const letterMap: Record<string, number> = {
     A: 0,
@@ -61,13 +77,19 @@ function parseQuestionsFromCsv(csv: string): Question[] {
     F: 5,
   };
 
-  return lines.slice(1).map((line, idx) => {
+  const questions: Question[] = [];
+
+  lines.slice(1).forEach((line, idx) => {
     const cols = parseCsvLine(line);
 
-    const question = cols[0];
-    const options = cols.slice(1, -1).filter((o) => o && o.length > 0);
+    const topic =
+      topicIndex !== -1 && cols[topicIndex] ? cols[topicIndex].trim() : "Allgemein";
 
-    const correctRaw = (cols[cols.length - 1] || "")
+    const question = cols[questionIndex]?.trim() || "";
+    const rawOptions = cols.slice(optionStart, optionEnd);
+    const options = rawOptions.filter((o) => o && o.trim().length > 0);
+
+    const correctRaw = (cols[correctIndex] || "")
       .split(";")
       .map((x) => x.trim().toUpperCase())
       .filter(Boolean);
@@ -76,13 +98,20 @@ function parseQuestionsFromCsv(csv: string): Question[] {
       .map((letter) => letterMap[letter])
       .filter((value) => value !== undefined && value < options.length);
 
-    return {
+    if (!question || options.length === 0 || correct.length === 0) {
+      return;
+    }
+
+    questions.push({
       id: idx + 1,
+      topic,
       question,
       options,
       correct,
-    };
+    });
   });
+
+  return questions;
 }
 
 function shuffleArray<T>(array: T[]): T[] {
@@ -94,25 +123,32 @@ function shuffleArray<T>(array: T[]): T[] {
   return shuffled;
 }
 
+function formatCorrectAnswers(question: Question) {
+  return question.correct
+    .map((index) => `${String.fromCharCode(65 + index)}. ${question.options[index]}`)
+    .join(" | ");
+}
+
 export default function SimpleMcqTestTool() {
   const [allQuestions, setAllQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
+  const [selectedTopic, setSelectedTopic] = useState<string>(ALL_TOPICS);
   const [quizSizeInput, setQuizSizeInput] = useState("10");
+
   const [quizQuestions, setQuizQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selected, setSelected] = useState<number[]>([]);
   const [result, setResult] = useState<"correct" | "wrong" | null>(null);
 
-  // Für den aktuellen Durchlauf
-  const [quizScore, setQuizScore] = useState({
+  const [currentRunScore, setCurrentRunScore] = useState<Score>({
     correct: 0,
     wrong: 0,
     answered: 0,
   });
 
-  // Für die gesamte Lernsitzung über mehrere Durchläufe hinweg
-  const [sessionScore, setSessionScore] = useState({
+  const [sessionScore, setSessionScore] = useState<Score>({
     correct: 0,
     wrong: 0,
     answered: 0,
@@ -126,18 +162,27 @@ export default function SimpleMcqTestTool() {
     async function loadQuestions() {
       try {
         setIsLoading(true);
-        const response = await fetch("/questions.csv");
+        setLoadError("");
 
+        const response = await fetch("/questions.csv", { cache: "no-store" });
         if (!response.ok) {
           throw new Error("questions.csv konnte nicht geladen werden.");
         }
 
-        const text = await response.text();
-        const parsed = parseQuestionsFromCsv(text);
+        const csv = await response.text();
+        const parsed = parseQuestionsFromCsv(csv);
+
+        if (parsed.length === 0) {
+          throw new Error(
+            "Es wurden 0 Fragen erkannt. Bitte prüfe die CSV-Struktur und den Header."
+          );
+        }
+
         setAllQuestions(parsed);
       } catch (error) {
-        console.error(error);
-        setAllQuestions([]);
+        const message =
+          error instanceof Error ? error.message : "Unbekannter Fehler beim Laden.";
+        setLoadError(message);
       } finally {
         setIsLoading(false);
       }
@@ -146,43 +191,56 @@ export default function SimpleMcqTestTool() {
     loadQuestions();
   }, []);
 
-  const totalDatabankCount = allQuestions.length;
+  const topics = useMemo(() => {
+    return [...new Set(allQuestions.map((q) => q.topic))]
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b, "de"));
+  }, [allQuestions]);
+
+  const filteredQuestions = useMemo(() => {
+    if (selectedTopic === ALL_TOPICS) {
+      return allQuestions;
+    }
+    return allQuestions.filter((q) => q.topic === selectedTopic);
+  }, [allQuestions, selectedTopic]);
+
+  const totalDatabankCount = filteredQuestions.length;
   const currentQuestion = quizQuestions[currentIndex];
   const quizCount = quizQuestions.length;
   const quizFinished = quizCount > 0 && currentIndex >= quizCount;
 
-  const remainingNewQuestionsCount = useMemo(
-    () =>
-      allQuestions.filter(
-        (question) => !excludedQuestionIds.includes(question.id)
-      ).length,
-    [allQuestions, excludedQuestionIds]
-  );
+  const remainingNewQuestionsCount = filteredQuestions.filter(
+    (question) => !excludedQuestionIds.includes(question.id)
+  ).length;
 
   const progressPercent =
-    quizCount > 0 ? Math.min((quizScore.answered / quizCount) * 100, 100) : 0;
+    quizCount > 0 ? Math.min((currentRunScore.answered / quizCount) * 100, 100) : 0;
+
+  function resetQuestionView() {
+    setQuizQuestions([]);
+    setCurrentIndex(0);
+    setSelected([]);
+    setResult(null);
+    setCurrentRunScore({ correct: 0, wrong: 0, answered: 0 });
+    setWrongQuestions([]);
+    setIsRetryMode(false);
+    setExcludedQuestionIds([]);
+  }
 
   function startQuiz() {
-    if (allQuestions.length === 0) return;
+    if (filteredQuestions.length === 0) return;
 
     const requested = Number.parseInt(quizSizeInput, 10);
     const safeRequested = Number.isNaN(requested) ? 10 : requested;
-    const clampedCount = Math.max(
-      1,
-      Math.min(safeRequested, allQuestions.length)
-    );
+    const clampedCount = Math.max(1, Math.min(safeRequested, filteredQuestions.length));
 
-    const randomSet = shuffleArray(allQuestions).slice(0, clampedCount);
+    const randomSet = shuffleArray(filteredQuestions).slice(0, clampedCount);
 
     setQuizQuestions(randomSet);
     setCurrentIndex(0);
     setSelected([]);
     setResult(null);
-
-    // Neuer kompletter Lernstart
-    setQuizScore({ correct: 0, wrong: 0, answered: 0 });
-    setSessionScore({ correct: 0, wrong: 0, answered: 0 });
-
+    setCurrentRunScore({ correct: 0, wrong: 0, answered: 0 });
     setWrongQuestions([]);
     setIsRetryMode(false);
     setExcludedQuestionIds([]);
@@ -196,17 +254,14 @@ export default function SimpleMcqTestTool() {
     setCurrentIndex(0);
     setSelected([]);
     setResult(null);
-
-    // Nur aktuellen Durchlauf zurücksetzen
-    setQuizScore({ correct: 0, wrong: 0, answered: 0 });
-
+    setCurrentRunScore({ correct: 0, wrong: 0, answered: 0 });
     setWrongQuestions([]);
     setIsRetryMode(true);
     setQuizSizeInput(String(wrongQuestions.length));
   }
 
   function startNewQuizWithoutCorrectAnswers() {
-    const remainingPool = allQuestions.filter(
+    const remainingPool = filteredQuestions.filter(
       (question) => !excludedQuestionIds.includes(question.id)
     );
 
@@ -214,10 +269,7 @@ export default function SimpleMcqTestTool() {
 
     const requested = Number.parseInt(quizSizeInput, 10);
     const safeRequested = Number.isNaN(requested) ? 10 : requested;
-    const clampedCount = Math.max(
-      1,
-      Math.min(safeRequested, remainingPool.length)
-    );
+    const clampedCount = Math.max(1, Math.min(safeRequested, remainingPool.length));
 
     const randomSet = shuffleArray(remainingPool).slice(0, clampedCount);
 
@@ -225,10 +277,7 @@ export default function SimpleMcqTestTool() {
     setCurrentIndex(0);
     setSelected([]);
     setResult(null);
-
-    // Nur aktuellen Durchlauf zurücksetzen
-    setQuizScore({ correct: 0, wrong: 0, answered: 0 });
-
+    setCurrentRunScore({ correct: 0, wrong: 0, answered: 0 });
     setWrongQuestions([]);
     setIsRetryMode(false);
     setQuizSizeInput(String(clampedCount));
@@ -253,7 +302,7 @@ export default function SimpleMcqTestTool() {
 
     setResult(isCorrect ? "correct" : "wrong");
 
-    setQuizScore((prev) => ({
+    setCurrentRunScore((prev) => ({
       correct: prev.correct + (isCorrect ? 1 : 0),
       wrong: prev.wrong + (isCorrect ? 0 : 1),
       answered: prev.answered + 1,
@@ -287,29 +336,17 @@ export default function SimpleMcqTestTool() {
   }
 
   function resetCurrentQuiz() {
-    if (quizCount === 0 && sessionScore.answered === 0) return;
-
-    setQuizQuestions([]);
-    setCurrentIndex(0);
-    setSelected([]);
-    setResult(null);
-
-    // Kompletten Lernstand zurücksetzen
-    setQuizScore({ correct: 0, wrong: 0, answered: 0 });
-    setSessionScore({ correct: 0, wrong: 0, answered: 0 });
-
-    setWrongQuestions([]);
-    setIsRetryMode(false);
-    setExcludedQuestionIds([]);
+    resetQuestionView();
   }
 
-  function formatCorrectAnswers(question: Question) {
-    return question.correct
-      .map(
-        (index) =>
-          `${String.fromCharCode(65 + index)}. ${question.options[index]}`
-      )
-      .join(" | ");
+  function resetWholeSession() {
+    resetQuestionView();
+    setSessionScore({ correct: 0, wrong: 0, answered: 0 });
+  }
+
+  function handleTopicChange(newTopic: string) {
+    setSelectedTopic(newTopic);
+    resetQuestionView();
   }
 
   return (
@@ -342,6 +379,26 @@ export default function SimpleMcqTestTool() {
         <section className="panel-card">
           <div className="controls-row">
             <div className="input-group">
+              <label htmlFor="topic-select" className="input-label">
+                Thema
+              </label>
+              <select
+                id="topic-select"
+                className="number-input"
+                value={selectedTopic}
+                onChange={(e) => handleTopicChange(e.target.value)}
+                disabled={isLoading}
+              >
+                <option value={ALL_TOPICS}>Alle Themen</option>
+                {topics.map((topic) => (
+                  <option key={topic} value={topic}>
+                    {topic}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="input-group">
               <label htmlFor="quiz-size" className="input-label">
                 Anzahl der Fragen
               </label>
@@ -350,7 +407,7 @@ export default function SimpleMcqTestTool() {
                 className="number-input"
                 type="number"
                 min={1}
-                max={totalDatabankCount || 1}
+                max={Math.max(totalDatabankCount, 1)}
                 value={quizSizeInput}
                 onChange={(e) => setQuizSizeInput(e.target.value)}
                 disabled={isLoading || totalDatabankCount === 0}
@@ -368,9 +425,17 @@ export default function SimpleMcqTestTool() {
             <button
               className="btn btn-neutral"
               onClick={resetCurrentQuiz}
-              disabled={quizCount === 0 && sessionScore.answered === 0}
+              disabled={quizCount === 0}
             >
               Quiz zurücksetzen
+            </button>
+
+            <button
+              className="btn btn-secondary"
+              onClick={resetWholeSession}
+              disabled={sessionScore.answered === 0 && quizCount === 0}
+            >
+              Ganze Sitzung zurücksetzen
             </button>
           </div>
         </section>
@@ -378,24 +443,28 @@ export default function SimpleMcqTestTool() {
         <section className="panel-card">
           {isLoading ? (
             <p className="empty-state">Fragen werden geladen ...</p>
+          ) : loadError ? (
+            <p className="empty-state">
+              Es konnten keine Fragen geladen werden. Bitte prüfe die Datei{" "}
+              <strong>questions.csv</strong> im public-Ordner.
+              <br />
+              <br />
+              Fehler: {loadError}
+            </p>
           ) : totalDatabankCount === 0 ? (
             <p className="empty-state">
-              Es konnten keine Fragen geladen werden. Bitte prüfe die Datei
-              <strong> questions.csv </strong> im public-Ordner.
+              Für das gewählte Thema wurden keine Fragen gefunden.
             </p>
           ) : quizCount === 0 ? (
             <p className="empty-state">
-              Bitte zuerst die gewünschte Anzahl an Fragen eingeben und „Quiz
-              starten“ klicken.
+              Bitte Thema auswählen, Anzahl festlegen und dann „Quiz starten“ klicken.
             </p>
           ) : quizFinished ? (
             <div>
               <div className="progress-wrap">
                 <div className="progress-top">
                   <span>
-                    {isRetryMode
-                      ? "Wiederholung abgeschlossen"
-                      : "Quiz abgeschlossen"}
+                    {isRetryMode ? "Wiederholung abgeschlossen" : "Quiz abgeschlossen"}
                   </span>
                   <span>
                     {quizCount} / {quizCount}
@@ -411,32 +480,29 @@ export default function SimpleMcqTestTool() {
               </h3>
 
               <p className="empty-state">
-                Ergebnis dieses Durchlaufs: {quizScore.correct} richtig,{" "}
-                {quizScore.wrong} falsch
+                Ergebnis dieses Durchgangs: {currentRunScore.correct} richtig,{" "}
+                {currentRunScore.wrong} falsch
               </p>
 
               <p className="empty-state">
-                Gesamte Lernsitzung: {sessionScore.correct} richtig,{" "}
-                {sessionScore.wrong} falsch bei {sessionScore.answered} beantworteten
-                Fragen
+                Sitzung gesamt: {sessionScore.correct} richtig, {sessionScore.wrong} falsch
               </p>
 
               {wrongQuestions.length > 0 && (
                 <p className="empty-state">
-                  Du kannst jetzt nur die falsch beantworteten Fragen erneut
-                  üben.
+                  Du kannst jetzt nur die falsch beantworteten Fragen erneut üben.
                 </p>
               )}
 
               {remainingNewQuestionsCount > 0 ? (
                 <p className="empty-state">
-                  Alternativ kannst du ein neues zufälliges Set starten, wobei
-                  bereits richtig beantwortete Fragen ausgeblendet werden.
+                  Alternativ kannst du ein neues zufälliges Set starten, wobei bereits
+                  richtig beantwortete Fragen im aktuell gewählten Thema ausgeblendet
+                  werden.
                 </p>
               ) : (
                 <p className="empty-state">
-                  Es sind keine weiteren neuen Fragen mehr übrig. Du hast alle
-                  bisher richtig beantwortet.
+                  Es sind keine weiteren neuen Fragen mehr übrig.
                 </p>
               )}
 
@@ -476,6 +542,10 @@ export default function SimpleMcqTestTool() {
                     style={{ width: `${progressPercent}%` }}
                   />
                 </div>
+              </div>
+
+              <div style={{ marginBottom: 10, color: "#6b7280", fontWeight: 600 }}>
+                Thema: {currentQuestion.topic}
               </div>
 
               <h3 className="question-title">{currentQuestion.question}</h3>
@@ -531,8 +601,7 @@ export default function SimpleMcqTestTool() {
                     <>
                       <strong>Falsch.</strong>
                       <div style={{ marginTop: 8 }}>
-                        Richtige Antwort(en):{" "}
-                        {formatCorrectAnswers(currentQuestion)}
+                        Richtige Antwort(en): {formatCorrectAnswers(currentQuestion)}
                       </div>
                     </>
                   )}
