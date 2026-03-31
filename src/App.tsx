@@ -366,7 +366,7 @@ export default function SimpleMcqTestTool() {
       <div className="app-container">
         <section className="hero-card">
           <h1 className="hero-title">Vorbereitungslehrgang Gruppenführungsausbildung</h1>
-          <p className="hero-subtitle">Ein Angebot des KFV Stormarns</p>
+          <p className="hero-subtitle">Ein Angebot des KFV Stormarn</p>
 
           <div className="stats-grid">
             <div className="stat-card">
@@ -624,7 +624,7 @@ export default function SimpleMcqTestTool() {
         </section>
 
         <div className="footer-note">
-          Ausschließlich entwickelt für den Vorbereitungslehrgang Gruppenführungsausbildung des Kreisfeuerwehrverbandes Stormarn. <strong>Powered by Richard Justenhoven</strong>
+          Ausschließlich entwickelt für den Vorbereitungslehrgang Gruppenführungsausbildung des Kreisfeuerwehrverbandes Stormarn. <strong>Developed by Richard Justenhoven</strong>
         </div>
       </div>
     </div>
