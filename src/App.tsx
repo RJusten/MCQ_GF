@@ -365,8 +365,8 @@ export default function SimpleMcqTestTool() {
     <div className="app-shell">
       <div className="app-container">
         <section className="hero-card">
-          <h1 className="hero-title">Prüfungsvorbereitung Gruppenführer</h1>
-          <p className="hero-subtitle">Kurs 0801 und 0802</p>
+          <h1 className="hero-title">Vorbereitungslehrgang Gruppenführungsausbildung</h1>
+          <p className="hero-subtitle">Ein Angebot des KFV Stormarns</p>
 
           <div className="stats-grid">
             <div className="stat-card">
@@ -624,8 +624,7 @@ export default function SimpleMcqTestTool() {
         </section>
 
         <div className="footer-note">
-          Ausschließlich entwickelt für die Prüfungsvorbereitung Gruppenführer
-          E-Learning März 2026 · <strong>Powered by Richie</strong>
+          Ausschließlich entwickelt für den Vorbereitungslehrgang Gruppenführungsausbildung des Kreisfeuerwehrverbandes Stormarn. <strong>Powered by Richard Justenhoven</strong>
         </div>
       </div>
     </div>
